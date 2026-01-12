@@ -31,6 +31,7 @@ class ExcelProcessor:
                 if art not in self.data_for_total:
                     self.data_for_total[art] = [0, 0, 0, 0, 0, True]
 
+                self.data_for_total[art][1] = row_data[1]
                 sale = int(row_data[2])
                 quantity = int(row_data[3])
                 if sale > 0:
@@ -39,6 +40,8 @@ class ExcelProcessor:
                 elif sale < 0:
                     self.data_for_total[art][0] -= quantity
                 self.data_for_total[art][4] += row_data[-1]
+                if self.data_for_total[art][0] == 0:
+                    del self.data_for_total[art]
 
         for i in self.data_for_total.keys():
             if self.data_for_total[i][0] > 0:
@@ -46,8 +49,11 @@ class ExcelProcessor:
             if self.data_for_total[i][0] <= 0:
                 self.global_minus += self.data_for_total[i][4]
             del self.data_for_total[i][4]
+            del self.data_for_total[i][4]
             self.total_sum += self.data_for_total[i][3]
-        print(self.total_sum + self.global_minus)
+            self.data_for_total[i][-1] = self.data_for_total[i][-1] + self.data_for_total[i][-1]* self.global_minus / self.total_sum
+            if self.data_for_total[i][0] > 0:
+                self.data_for_total[i][-2] = self.data_for_total[i][-1] / self.data_for_total[i][0]
 
 processor = ExcelProcessor("Отчет_по_товарам_за_период_2025_11_24_2025_11_30.xlsx")
 processor.get_data()
