@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 import time
+import os
 
 start_time = time.time()
 
@@ -8,7 +9,7 @@ class ExcelProcessor:
     def __init__(self, name_of_file):
         self.file = load_workbook(f"{name_of_file}", data_only=True)
         self.ws = self.file["Начисления"]
-
+        self.table_sheet = "Итог"
         self.total_sum = 0
         self.global_minus = 0
         self.data_for_total = dict()
@@ -54,9 +55,12 @@ class ExcelProcessor:
             self.data_for_total[i][-1] = self.data_for_total[i][-1] + self.data_for_total[i][-1]* self.global_minus / self.total_sum
             if self.data_for_total[i][0] > 0:
                 self.data_for_total[i][-2] = self.data_for_total[i][-1] / self.data_for_total[i][0]
+    def write_data(self):
+        pass
 
 processor = ExcelProcessor("Отчет_по_товарам_за_период_2025_11_24_2025_11_30.xlsx")
 processor.get_data()
+processor.write_data()
 
 end_time = time.time()
 execution_time = end_time - start_time
