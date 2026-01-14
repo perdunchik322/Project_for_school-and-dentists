@@ -59,6 +59,7 @@ class ExcelProcessor:
                 self.data_for_total[i][-2] = self.data_for_total[i][-1] / self.data_for_total[i][0]
         return self.data_for_total
 
+
     def write_data(self):
         # Удаляем лист, если он существует
         if self.table_name in self.file.sheetnames:
