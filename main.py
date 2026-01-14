@@ -13,10 +13,11 @@ class ExcelProcessor:
         self.table_name = "Итог"
         self.total_sum = 0
         self.global_minus = 0
-        self.data_for_total = dict()
+        self.data = dict()
+        self.data_for_total = list()
 
     def get_data(self):
-        needed_columns = ["G", "H", "J", "I", "Y"]
+        needed_columns = ["G", "H", "I", "J", "Y"]
         # for every rows
         for row in range(2, self.ws.max_row + 1):
             row_data = []
@@ -25,40 +26,39 @@ class ExcelProcessor:
                 cell_value = self.ws[f"{col}{row}"].value
                 row_data.append(cell_value)
             # calculating of quantity
-            if None in row_data:  # minus from services and another things
+            if None == row_data[0]:  # minus from services and another things
                 self.global_minus += row_data[-1]
             else:
                 art = str(row_data[0])
                 # make dictionary for unic arts
-                if art not in self.data_for_total:
-                    self.data_for_total[art] = [0, 0, 0, 0, 0, True]
-
-                self.data_for_total[art][1] = row_data[1]
-                sale = int(row_data[2])
-                quantity = int(row_data[3])
+                if art not in self.data:
+                    self.data[art] = [0, 0, 0, 0]
+                    self.data[art][0] = row_data[1]
+                self.total_sum += row_data[4]
+                #cell_value
+                quantity = row_data[2]
+                sale = row_data[3]
+                total = row_data[4]
+                #S1
+                self.data[art][3] += total
+                #calculating of quantity
                 if sale > 0:
-                    self.data_for_total[art][5] = False
-                    self.data_for_total[art][0] += quantity
+                    self.data[art][1] += quantity
                 elif sale < 0:
-                    self.data_for_total[art][0] -= quantity
-                self.data_for_total[art][4] += row_data[-1]
-                if self.data_for_total[art][0] == 0:
-                    del self.data_for_total[art]
-
-        for i in self.data_for_total.keys():
-            if self.data_for_total[i][0] > 0:
-                self.data_for_total[i][3] = self.data_for_total[i][4]
-            if self.data_for_total[i][0] <= 0:
-                self.global_minus += self.data_for_total[i][4]
-            del self.data_for_total[i][4]
-            del self.data_for_total[i][4]
-            self.total_sum += self.data_for_total[i][3]
-            self.data_for_total[i][-1] = self.data_for_total[i][-1] + self.data_for_total[i][
-                -1] * self.global_minus / self.total_sum
-            if self.data_for_total[i][0] > 0:
-                self.data_for_total[i][-2] = self.data_for_total[i][-1] / self.data_for_total[i][0]
+                    self.data[art][1] -= quantity
+        #filter of sum and global_minus
+        for art in self.data:
+            quantity_art = self.data[art][1]
+            if quantity_art <= 0:
+                self.global_minus += self.data[art][3]
+                self.data[art][2] = -1
+            else:
+                self.data_for_total.append([art] + self.data[art])
+        for row_ind in range(len(self.data_for_total)):
+            s1 = self.data_for_total[row_ind][-1]
+            self.data_for_total[row_ind][-1] = s1 + s1 / self.total_sum * self.global_minus
+            self.data_for_total[row_ind][-2] = self.data_for_total[row_ind][-1] / self.data_for_total[row_ind][-3]
         return self.data_for_total
-
 
     def write_data(self):
         # Удаляем лист, если он существует
@@ -73,14 +73,8 @@ class ExcelProcessor:
         ws.append(["Артикул", "Название", "Кол-во", "Цена, шт", "Итого, So"])
 
         # Записываем данные
-        for art in self.data_for_total:
-            row = [
-                art,
-                self.data_for_total[art][1],
-                self.data_for_total[art][0],
-                self.data_for_total[art][2],
-                self.data_for_total[art][3]
-            ]
+        for row_ind in range(len(self.data_for_total)):
+            row = self.data_for_total[row_ind]
             ws.append(row)
 
         self.file.save(self.path_to_file)
@@ -130,13 +124,12 @@ class MainWindow(QMainWindow):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
 
-        for line_ind, art in enumerate(self.data_for_table):
-            data = self.data_for_table[art]
-            self.view_table.setItem(line_ind, 0, QTableWidgetItem(str(art)))
+        for line_ind, data in enumerate(self.data_for_table):
+            self.view_table.setItem(line_ind, 0, QTableWidgetItem(str(data[0])))
             self.view_table.setItem(line_ind, 1, QTableWidgetItem(str(data[1])))
-            self.view_table.setItem(line_ind, 2, QTableWidgetItem(str(data[0])))
-            self.view_table.setItem(line_ind, 3, QTableWidgetItem(str(data[2])))
-            self.view_table.setItem(line_ind, 4, QTableWidgetItem(str(data[3])))
+            self.view_table.setItem(line_ind, 2, QTableWidgetItem(str(data[2])))
+            self.view_table.setItem(line_ind, 3, QTableWidgetItem(str(data[3])))
+            self.view_table.setItem(line_ind, 4, QTableWidgetItem(str(data[4])))
 
     def center_window(self):
         # moving window to center
