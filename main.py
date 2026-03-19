@@ -3,13 +3,10 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QHeaderView
 from openpyxl import load_workbook
 from PyQt6 import uic
 import sys
-import os
-
 
 # Класс обработчик эксель файлов
 class ExcelProcessor:
-    def __init__(self, path):
-        # создание переменныз используемых в дальнейшем
+    def __init__(self, path):  # создание переменныз используемых в дальнейшем
         self.path_to_file = path
         self.file = load_workbook(f"{path}", data_only=True)
         self.ws = self.file["Начисления"]
@@ -26,7 +23,6 @@ class ExcelProcessor:
             for col in needed_columns:
                 cell_value = self.ws[f"{col}{row}"].value
                 row_data.append(cell_value)
-            # расчёт кол-ва реально проданных товаров
             if None == row_data[0]:  # отсев глобального минуса(операции в чистый минус)
                 self.global_minus += row_data[-1]
             else:
@@ -78,13 +74,14 @@ class MainWindow(QMainWindow):
         self.center_window()
         self.setup()
 
-    def setup(self): # подключения тригеров всех кнопок и добавление шорткатов
+    def setup(self):  # подключения тригеров всех кнопок и добавление шорткатов
         self.choose_file_action.setShortcut("Ctrl+C")
         self.save_action.setShortcut("Ctrl+S")
         self.choose_file_action.triggered.connect(self.choose_file)
         self.save_action.triggered.connect(self.write_in_file)
 
-    def choose_file(self): # получение файла и создание экземпляра обработчика файла по полученному из диалог. окна пути
+    def choose_file(
+            self):  # получение файла и создание экземпляра обработчика файла по полученному из диалог. окна пути
         try:
             fname = QFileDialog.getOpenFileName(self, "Выбрать таблицу", '',
                                                 'Таблица (*.xlsx);;Таблица (*.xlsm);;Таблица (*.xls);;Все файлы(*)')
@@ -93,9 +90,12 @@ class MainWindow(QMainWindow):
             self.data_for_table = self.processor.get_data()
             self.init_view_table()
         except Exception:
-            QMessageBox.critical(self, "Ошибка", "Ошибка обработки файла")
+            if fname == ('', ''):
+                QMessageBox.information(self, "Справка", "Укажите путь к файлу")
+            else:
+                QMessageBox.critical(self, "Ошибка", "Ошибка обработки файла")
 
-    def write_in_file(self): # запись и отображение в статус баре успешность операции
+    def write_in_file(self):  # запись и отображение в статус баре успешность операции
         try:
             self.processor.write_data()
             self.statusBar().showMessage(f'Файл сохранён по пути:{self.path_to_file}')
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         except Exception:
             QMessageBox.critical(self, "Ошибка", "Ошибка обработки файла")
 
-    def init_view_table(self): # заполнение таблицы внутри окна приложения с результатом программы
+    def init_view_table(self):  # заполнение таблицы внутри окна приложения с результатом программы
         self.view_table.setColumnCount(5)
         self.view_table.setHorizontalHeaderLabels(['Артикул', 'Название', 'Кол-во', 'Цена, шт', 'Итого'])
         self.view_table.setRowCount(len(self.data_for_table))
@@ -123,12 +123,11 @@ class MainWindow(QMainWindow):
             self.view_table.setItem(line_ind, 4, QTableWidgetItem(str(data[4])))
 
     def center_window(self):
-        # moving window to center
         screen_geometry = self.screen().availableGeometry()  # геометрические данные экрана
         window_geometry = self.frameGeometry()  # геометрические данные окна программы
         center_point = screen_geometry.center()  # получение центра экрана(в пикселях)
         window_geometry.moveCenter(center_point)  # перемещение центра окна в центр экрана в виртуальном прямоугольнике
-        self.move(window_geometry.topLeft()) # перемещение реального окна
+        self.move(window_geometry.topLeft())  # перемещение реального окна
 
 
 if __name__ == '__main__':
