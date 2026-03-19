@@ -1,7 +1,7 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTableWidgetItem
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QHeaderView
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QHeaderView
 from openpyxl import load_workbook
-from PyQt6 import uic
+from PyQt5 import uic
 import sys
 
 # Класс обработчик эксель файлов
