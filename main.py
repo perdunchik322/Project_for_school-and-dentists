@@ -5,8 +5,11 @@ from PyQt6 import uic
 import sys
 import os
 
+
+# Класс обработчик эксель файлов
 class ExcelProcessor:
     def __init__(self, path):
+        # создание переменныз используемых в дальнейшем
         self.path_to_file = path
         self.file = load_workbook(f"{path}", data_only=True)
         self.ws = self.file["Начисления"]
@@ -16,68 +19,56 @@ class ExcelProcessor:
         self.data = dict()
         self.data_for_total = list()
 
-    def get_data(self):
+    def get_data(self):  # функция получающая нужные данные из таблицы и обрабатываающая их по тз
         needed_columns = ["G", "H", "I", "J", "Y"]
-        # for every rows
         for row in range(2, self.ws.max_row + 1):
             row_data = []
-            # row from table
             for col in needed_columns:
                 cell_value = self.ws[f"{col}{row}"].value
                 row_data.append(cell_value)
-            # calculating of quantity
-            if None == row_data[0]:  # minus from services and another things
+            # расчёт кол-ва реально проданных товаров
+            if None == row_data[0]:  # отсев глобального минуса(операции в чистый минус)
                 self.global_minus += row_data[-1]
             else:
                 art = str(row_data[0])
-                # make dictionary for unic arts
-                if art not in self.data:
+                if art not in self.data:  # создание хеш таблицы для каждого уникального артикула
                     self.data[art] = [0, 0, 0, 0]
                     self.data[art][0] = row_data[1]
                 self.total_sum += row_data[4]
-                #cell_value
-                quantity = row_data[2]
+                quantity = row_data[2]  # переменные с значениями ячеек, более понятные названия
                 sale = row_data[3]
                 total = row_data[4]
-                #S1
-                self.data[art][3] += total
-                #calculating of quantity
-                if sale > 0:
+                self.data[art][3] += total  # s1 из тз
+                if sale > 0:  # расчёт кол-ва продаж для артикула
                     self.data[art][1] += quantity
                 elif sale < 0:
                     self.data[art][1] -= quantity
-        #filter of sum and global_minus
-        for art in self.data:
+        for art in self.data:  # фильтрация тех продаж что ушли в минус
             quantity_art = self.data[art][1]
             if quantity_art <= 0:
                 self.global_minus += self.data[art][3]
                 self.data[art][2] = -1
             else:
                 self.data_for_total.append([art] + self.data[art])
-        for row_ind in range(len(self.data_for_total)):
+        for row_ind in range(len(self.data_for_total)):  # распределения минуса на всех
             s1 = self.data_for_total[row_ind][-1]
             self.data_for_total[row_ind][-1] = s1 + s1 / self.total_sum * self.global_minus
             self.data_for_total[row_ind][-2] = self.data_for_total[row_ind][-1] / self.data_for_total[row_ind][-3]
         return self.data_for_total
 
-    def write_data(self):
-        # Удаляем лист, если он существует
-        if self.table_name in self.file.sheetnames:
+    def write_data(self):  # создание нового листа в изначальном файле и запись туда обработанной информации
+        if self.table_name in self.file.sheetnames:  # проверка на существование записий и чистка лишних(чтобы не плодить листы)
             std = self.file[self.table_name]
             self.file.remove(std)
-
-        # Создаем новый лист
-        ws = self.file.create_sheet(title=self.table_name)
-
-        # Добавляем заголовки
-        ws.append(["Артикул", "Название", "Кол-во", "Цена, шт", "Итого, So"])
+        ws = self.file.create_sheet(title=self.table_name)  # новый лист с именем "Итог"
+        ws.append(["Артикул", "Название", "Кол-во", "Цена, шт", "Итого, So"])  # добавление строки с заголовками
 
         # Записываем данные
         for row_ind in range(len(self.data_for_total)):
             row = self.data_for_total[row_ind]
             ws.append(row)
-
         self.file.save(self.path_to_file)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -87,16 +78,16 @@ class MainWindow(QMainWindow):
         self.center_window()
         self.setup()
 
-    def setup(self):
+    def setup(self): # подключения тригеров всех кнопок и добавление шорткатов
         self.choose_file_action.setShortcut("Ctrl+C")
         self.save_action.setShortcut("Ctrl+S")
         self.choose_file_action.triggered.connect(self.choose_file)
         self.save_action.triggered.connect(self.write_in_file)
 
-    def choose_file(self):
+    def choose_file(self): # получение файла и создание экземпляра обработчика файла по полученному из диалог. окна пути
         try:
             fname = QFileDialog.getOpenFileName(self, "Выбрать таблицу", '',
-                                                            'Таблица (*.xlsx);;Таблица (*.xlsm);;Таблица (*.xls);;Все файлы(*)')
+                                                'Таблица (*.xlsx);;Таблица (*.xlsm);;Таблица (*.xls);;Все файлы(*)')
             self.path_to_file = fname[0]
             self.processor = ExcelProcessor(self.path_to_file)
             self.data_for_table = self.processor.get_data()
@@ -104,7 +95,7 @@ class MainWindow(QMainWindow):
         except Exception:
             QMessageBox.critical(self, "Ошибка", "Ошибка обработки файла")
 
-    def write_in_file(self):
+    def write_in_file(self): # запись и отображение в статус баре успешность операции
         try:
             self.processor.write_data()
             self.statusBar().showMessage(f'Файл сохранён по пути:{self.path_to_file}')
@@ -112,7 +103,7 @@ class MainWindow(QMainWindow):
         except Exception:
             QMessageBox.critical(self, "Ошибка", "Ошибка обработки файла")
 
-    def init_view_table(self):
+    def init_view_table(self): # заполнение таблицы внутри окна приложения с результатом программы
         self.view_table.setColumnCount(5)
         self.view_table.setHorizontalHeaderLabels(['Артикул', 'Название', 'Кол-во', 'Цена, шт', 'Итого'])
         self.view_table.setRowCount(len(self.data_for_table))
@@ -133,11 +124,12 @@ class MainWindow(QMainWindow):
 
     def center_window(self):
         # moving window to center
-        screen_geometry = self.screen().availableGeometry()  # get geom of screen
-        window_geometry = self.frameGeometry()  # get geom of window
-        center_point = screen_geometry.center()  # make variable for center of screen
-        window_geometry.moveCenter(center_point)  # move center of window to screen center
-        self.move(window_geometry.topLeft())
+        screen_geometry = self.screen().availableGeometry()  # геометрические данные экрана
+        window_geometry = self.frameGeometry()  # геометрические данные окна программы
+        center_point = screen_geometry.center()  # получение центра экрана(в пикселях)
+        window_geometry.moveCenter(center_point)  # перемещение центра окна в центр экрана в виртуальном прямоугольнике
+        self.move(window_geometry.topLeft()) # перемещение реального окна
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
