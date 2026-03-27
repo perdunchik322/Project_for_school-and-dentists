@@ -30,7 +30,6 @@ class ExcelProcessor:
                 if art not in self.data:  # создание хеш таблицы для каждого уникального артикула
                     self.data[art] = [0, 0, 0, 0]
                     self.data[art][0] = row_data[1]
-                self.total_sum += row_data[4]
                 quantity = row_data[2]  # переменные с значениями ячеек, более понятные названия
                 sale = row_data[3]
                 total = row_data[4]
@@ -46,6 +45,7 @@ class ExcelProcessor:
                 self.data[art][2] = -1
             else:
                 self.data_for_total.append([art] + self.data[art])
+        self.total_sum = sum(row[-1] for row in self.data_for_total)
         for row_ind in range(len(self.data_for_total)):  # распределения минуса на всех
             s1 = self.data_for_total[row_ind][-1]
             self.data_for_total[row_ind][-1] = s1 + s1 / self.total_sum * self.global_minus
